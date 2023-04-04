@@ -2,6 +2,8 @@ import openai
 import os
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
+
+
 class Conversation:
     def __init__(self, prompt, num_of_round):
         self.prompt = prompt
