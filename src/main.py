@@ -6,8 +6,6 @@ import openai
 from models.openai import Conversation
 
 if __name__ == '__main__':
-    openai.api_key = os.environ.get("OPENAI_API_KEY")
-    print(f"the key is {os.environ.get('OPENAI_API_KEY')}")
 
     prompt = """Imagine you are an expert in AutoML and is targeted to provide users guidance on how to use AutoGluon
     to solve a specific problem. If the question is not relevant to machine learning or AutoGluon, just kindly tell the user that
@@ -38,4 +36,4 @@ if __name__ == '__main__':
         )
         clear.click(lambda: None, None, chatbot, queue=False)
 
-    demo.launch()
+    demo.launch(share=True, server_name=None)
