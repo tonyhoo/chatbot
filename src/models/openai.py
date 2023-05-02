@@ -1,5 +1,8 @@
-import openai
 import os
+
+import openai
+
+from rich import print
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
@@ -18,7 +21,7 @@ class Conversation:
                 model="gpt-3.5-turbo",
                 messages=self.messages,
                 temperature=0.5,
-                max_tokens=2048,
+                max_tokens=3000,
                 top_p=1,
             )
         except Exception as e:
@@ -26,9 +29,12 @@ class Conversation:
             return e
 
         message = response["choices"][0]["message"]["content"]
-        num_of_tokens = response['usage']['total_tokens']
+        num_of_tokens = response["usage"]["total_tokens"]
         self.messages.append({"role": "assistant", "content": message})
 
         if len(self.messages) > self.num_of_round * 2 + 1:
             del self.messages[1:3]
         return message, num_of_tokens
+
+
+

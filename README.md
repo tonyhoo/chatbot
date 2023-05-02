@@ -4,6 +4,7 @@
 * Have Python 3.6 or later installed
 * `pip install -r requirements.txt`
 * `export OPENAI_API_KEY=<key>` and generate your openai key at [here](https://platform.openai.com/account/api-keys)
+* `export SERPAPI_API_KEY=<key>` and generate your own key at [here](https://serpapi.com/manage-api-key)
 
 ## How to Use
 ### 1. Run the chatbot in the command line

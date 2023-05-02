@@ -1,14 +1,25 @@
 import os
-from typing import Optional
+from threading import Lock
+from typing import Optional, Tuple
 
 import gradio as gr
+from langchain import ConversationChain
 import typer
 from rich import print
-
+from langchain.document_loaders import UnstructuredURLLoader
+from langchain.chains import ConversationalRetrievalChain
+from langchain.indexes import VectorstoreIndexCreator
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.llms import OpenAI
 from models.openai import Conversation
+from models.tools import AutoGluonFAQTools
+from langchain.agents import initialize_agent
+from langchain.agents import load_tools
+
 
 app = typer.Typer()
-
 
 @app.command(name="server")
 def server(name: Optional[str] = None, port: Optional[int] = None):
@@ -42,18 +53,13 @@ def server(name: Optional[str] = None, port: Optional[int] = None):
     demo.launch(share=True, server_name=name, server_port=port)
 
 
+
 @app.command(name="local")
 def local(question: str = "How to use AutoGluon?"):
     """Test the model locally in CLI"""
-    prompt = """Imagine you are an expert in AutoML and is targeted to provide users guidance on how to use AutoGluon
-           to solve a specific problem. If the question is not relevant to machine learning or AutoGluon, just kindly tell the user that
-           you can NOT help and ask the user to ask another question relevant to AutoGluon.
-           Your answer should be in English and provide code snippets to help users understand how to use AutoGluon."""
-
-    conv = Conversation(prompt, 5)
     while True:
         question = input("Type in your question:")
-        print(conv.ask(question)[0])
+        print(agent.run(question))       
 
 
 def validate_credentials():
@@ -67,5 +73,7 @@ def validate_credentials():
 
 if __name__ == '__main__':
     validate_credentials()
+    tools = [AutoGluonFAQTools()] + load_tools(["serpapi"])
+    agent = initialize_agent(tools, OpenAI(model_name="gpt-3.5-turbo"), agent="zero-shot-react-description", verbose=True)
     app()
 
