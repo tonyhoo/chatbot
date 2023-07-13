@@ -1,22 +1,11 @@
-import os
-from threading import Lock
-from typing import Optional, Tuple
+from typing import Optional
 
 import gradio as gr
-from langchain import ConversationChain
 import typer
 from rich import print
-from langchain.document_loaders import UnstructuredURLLoader
-from langchain.chains import ConversationalRetrievalChain
-from langchain.indexes import VectorstoreIndexCreator
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
-from langchain.llms import OpenAI
-from models.openai import Conversation
-from models.tools import AutoGluonFAQTools
-from langchain.agents import initialize_agent
-from langchain.agents import load_tools
+
+from models.falcon import FalconConversation
+
 
 
 app = typer.Typer()
@@ -24,56 +13,57 @@ app = typer.Typer()
 @app.command(name="server")
 def server(name: Optional[str] = None, port: Optional[int] = None):
     """Start a gradio server on your local box given the name and port number."""
-    prompt = """Imagine you are an expert in AutoML and is targeted to provide users guidance on how to use AutoGluon
-        to solve a specific problem. If the question is not relevant to machine learning or AutoGluon, just kindly tell the user that
-        you can NOT help and ask the user to ask another question relevant to AutoGluon.
-        Your answer should be in English and provide code snippets to help users understand how to use AutoGluon."""
+    prompt = """### Human: """
 
-    conv = Conversation(prompt, 5)
+    conv = FalconConversation(prompt)
 
     with gr.Blocks() as demo:
-        chatbot = gr.Chatbot()
-        msg = gr.Textbox("Hi, I am AutoGluon agent, how can I help you?")
+        msg = gr.Textbox("How can foreign patients enter the UAE for treatment?")
         clear = gr.Button("Clear")
+        chatbot_sft = gr.Chatbot(label="falcon-7b-aws-qapairs-67")
+        
+        
+        chatbot_base = gr.Chatbot(label="falcon-7b")
+        chatbot_instruct = gr.Chatbot(label="falcon-7b-instruct")
 
         def user(user_message, history):
             return "", history + [[user_message, None]]
 
-        def bot(history):
-            bot_message = conv.ask(history[-1][0])[0]
+        def bot_sft(history):
+            bot_message = conv.ask(question=history[-1][0], model_name="sft")
+            history[-1][1] = bot_message
+            print(bot_message)
+            return history
+        
+        def bot_base(history):
+            bot_message = conv.ask(question=history[-1][0], model_name="base")
+            history[-1][1] = bot_message
+            print(bot_message)
+            return history
+        
+        def bot_instruct(history):
+            bot_message = conv.ask(question=history[-1][0], model_name="instruct")
             history[-1][1] = bot_message
             print(bot_message)
             return history
 
-        msg.submit(user, [msg, chatbot], [msg, chatbot], queue=False).then(
-            bot, chatbot, chatbot
+        msg.submit(user, [msg, chatbot_sft], [msg, chatbot_sft], queue=False).then(
+            bot_sft, chatbot_sft, chatbot_sft
         )
-        clear.click(lambda: None, None, chatbot, queue=False)
-
-    demo.launch(share=True, server_name=name, server_port=port)
-
-
-
-@app.command(name="local")
-def local(question: str = "How to use AutoGluon?"):
-    """Test the model locally in CLI"""
-    while True:
-        question = input("Type in your question:")
-        print(agent.run(question))       
-
-
-def validate_credentials():
-    open_ai_key = os.environ.get("OPENAI_API_KEY")
-    if open_ai_key is None or open_ai_key == "":
-        raise ValueError(
-            "Please set the OPENAI_API_KEY environment variable to your OpenAI API key."
+        msg.submit(user, [msg, chatbot_base], [msg, chatbot_base], queue=False).then(
+            bot_base, chatbot_base, chatbot_base
         )
-    print("Found OpenAI API key.")
+        msg.submit(user, [msg, chatbot_instruct], [msg, chatbot_instruct], queue=False).then(
+            bot_instruct, chatbot_instruct, chatbot_instruct
+        )
+        clear.click(lambda: None, None, chatbot_sft, queue=False)
+        clear.click(lambda: None, None, chatbot_base, queue=False)
+        clear.click(lambda: None, None, chatbot_instruct, queue=False)
+        
+
+    demo.launch(share=True, server_name=name, server_port=port)   
 
 
 if __name__ == '__main__':
-    validate_credentials()
-    tools = [AutoGluonFAQTools()] + load_tools(["serpapi"])
-    agent = initialize_agent(tools, OpenAI(model_name="gpt-3.5-turbo"), agent="zero-shot-react-description", verbose=True)
     app()
 
