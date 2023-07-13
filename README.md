@@ -1,4 +1,4 @@
-# ChatBot for AutoGluon Demo
+# ChatBot for Falcon Demo
 
 ## Installation
 * Have Python 3.6 or later installed
